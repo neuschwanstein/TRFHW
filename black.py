@@ -28,7 +28,7 @@ def get_data():
     lsc['σ'] = [60.04,63.17,54.78,48.62,44.66,41.34,41.25,41.25,35.15,34.28]
     lsc['σ'] = lsc['σ']/100
     lsc['raw_σ'] = lsc['σ']
-    # lsc['cap'] = cap(lsc['T'],lsc['σ'])
+    lsc['cap'] = cap(lsc['T'],lsc['σ'])
     lsc = lsc.set_index('T',drop=False)
     return lsc
 
@@ -80,21 +80,6 @@ def cap(T,σ,K=None):
     See Brigo & Mercurio2006, Eq. (1.26) p. 18 for details
 
     '''
-    if K is None:
-        K = atm_strike(T)
-    cap = 0
-    for Ti in np.arange(2*τ,T+τ,τ):
-        v = σ*sqrt(Ti - τ)
-        Fi = F(Ti-τ,Ti)
-        d1 = (log(Fi/K) + v**2/2)/v
-        d2 = (log(Fi/K) - v**2/2)/v
-        Bl = Fi*Φ(d1) - K*Φ(d2)
-        cap += P(Ti)*Bl
-    return cap*τ
-cap = np.vectorize(cap)
-
-
-def vec_cap(T,σ,K=None):
     T = np.array(T).astype(float)
     σ = np.array(σ).astype(float)
     if K is None:
@@ -118,6 +103,20 @@ def vec_cap(T,σ,K=None):
     caps = np.ma.array(caps,mask=Ts>T)
     caps = caps.sum(axis=0).data
     return caps
+
+#     if K is None:
+#         K = atm_strike(T)
+#     cap = 0
+#     for Ti in np.arange(2*τ,T+τ,τ):
+#         v = σ*sqrt(Ti - τ)
+#         Fi = F(Ti-τ,Ti)
+#         d1 = (log(Fi/K) + v**2/2)/v
+#         d2 = (log(Fi/K) - v**2/2)/v
+#         Bl = Fi*Φ(d1) - K*Φ(d2)
+#         cap += P(Ti)*Bl
+#     return cap*τ
+# cap = np.vectorize(cap)
+
 
 # def f_cir(t,*α):
 #     # Cf. Brigo & Mercurio2006, Eq. (3.77) p. 102
