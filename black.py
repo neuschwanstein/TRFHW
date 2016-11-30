@@ -29,6 +29,7 @@ def get_data():
     lsc['σ'] = lsc['σ']/100
     lsc['raw_σ'] = lsc['σ']
     lsc['cap'] = cap(lsc['T'],lsc['σ'])
+    lsc['raw_cap'] = lsc['cap']
     lsc = lsc.set_index('T',drop=False)
     return lsc
 
@@ -99,10 +100,10 @@ def cap(T,σ,K=None):
     d1 = (log(Fi/K) + v**2/2)/v
     d2 = (log(Fi/K) - v**2/2)/v
     Bl = Fi*Φ(d1) - K*Φ(d2)
-    caps = τ*P(T)*Bl
-    caps = np.ma.array(caps,mask=Ts>T)
-    caps = caps.sum(axis=0).data
-    return caps
+    caplets = τ*P(T)*Bl
+    caplets = np.ma.array(caplets,mask=Ts>T)
+    cap = caplets.sum(axis=0).data
+    return cap
 
 #     if K is None:
 #         K = atm_strike(T)
@@ -179,7 +180,7 @@ def ZBP(T,K,*α):
 
 
 def cap_CIR(T,x0,k,θ,σ):
-    K = atm_strike(0,T)
+    K = atm_strike(T)
     cap = 0
     α = (x0,k,θ,σ)
     for Ti in np.arange(τ,T,τ):
@@ -188,6 +189,35 @@ def cap_CIR(T,x0,k,θ,σ):
 cap_CIR = np.vectorize(cap_CIR)
 
 
+def vec_cap_CIR(T,x0,k,θ,σ):
+    T = np.array(T).astype(float)
+    try:
+        tl = np.max(T)
+        l = len(T)
+    except TypeError:
+        tl = T
+        l = 1
+    K = atm_strike(T)
+    α = (x0,k,θ,σ)
+
+    Ts = np.arange(τ,tl,τ)
+    Ts = np.tile(Ts,(l,1)).T
+
+    caplets = (1+K*τ)*ZBP(Ts,1/(1+K*τ),*α)
+    caplets = np.ma.array(caplets,mask=Ts>=T)
+    cap = caplets.sum(axis=0).data
+    return cap
+
+
 if __name__ == '__main__':
     lsc = get_data()
-    curve_fit(cap_CIR,lsc['T'],lsc['cap'])
+    (black_params,_) = curve_fit(vec_cap_CIR,lsc['T'],lsc['cap'])
+
+    for t in np.arange(2*τ,10+τ,τ):
+        price = vec_cap_CIR(t,*black_params)
+        σ = cap_vol(price,t)
+        lsc.loc[t,'cap'] = price
+        lsc.loc[t,'σ'] = σ
+        lsc.loc[t,'T'] = t
+    lsc = lsc.set_index('T',drop=False)
+    lsc = lsc.sort_index()
