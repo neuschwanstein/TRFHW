@@ -156,8 +156,10 @@ def get_ns_params(lsc=None):
     interpolate_swaps(lsc,T1=7,T2=10,method=linear_interp)
 
     points = lsc[~lsc['r'].isnull()]
+    sigma = [1/10,1,1/10] + [1]*(len(points)-3)
     [params,cov] = curve_fit(zero_ns,points['T'],points['r'],
-                             max_nfev=8000,method='trf')
+                             max_nfev=8000,method='trf',sigma=sigma)
+    # [params,cov] = curve_fit(zero_ns,points['T'],points['r'])
 
     args = 'β0 β1 β2 β3 θ1 θ2'.split()
     params = dict(zip(args,params))
@@ -207,16 +209,16 @@ def unified_opt(lsc):
 
 if __name__ == '__main__':
     lsc = get_data()
-    try:
-        lsc = get_interpolated_data(lsc,params)
-    except NameError:
-        [params,_] = get_ns_params()
-        lsc = get_interpolated_data(lsc,params)
+    # try:
+    #     lsc = get_interpolated_data(lsc,params)
+    # except NameError:
+    [params,_] = get_ns_params()
+    lsc = get_interpolated_data(lsc,params)
 
     zero_curve = partial(zero_ns,**params)
     forward_curve = partial(forward_ns,**params)
     t = np.linspace(0,10,10000)
-    lsc['r'].plot()
+    # lsc['r'].plot()
     plt.plot(t,zero_curve(t),t,forward_curve(t))
     plt.legend(['Zero spot rates','Zero Forward Rates'],loc='lower right')
     plt.show()
