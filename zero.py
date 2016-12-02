@@ -210,7 +210,7 @@ if __name__ == '__main__':
     try:
         lsc = get_interpolated_data(lsc,params)
     except NameError:
-        params = get_ns_params()
+        [params,_] = get_ns_params()
         lsc = get_interpolated_data(lsc,params)
 
     zero_curve = partial(zero_ns,**params)

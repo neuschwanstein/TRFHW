@@ -72,7 +72,7 @@ def cap_vol(cap_price,T):
     '''
     f = lambda σ: cap(T,σ=σ) - cap_price
     return root(f,x0=0.3).x
-
+cap_vol = np.vectorize(cap_vol)
 
 def cap(T,σ,K=None):
     '''Black formula for cap pricing provided a constant volatility σ and maturity.
@@ -174,22 +174,25 @@ def ZBC(T,K,*α):
 
 
 def ZBP(T,K,*α):
-    # p. 56
+    # Put call parity p. 56
     ZBP = ZBC(T,K,*α) - P(T+τ) + K*P(T)
     return ZBP
 
 
+# def cap_CIR(T,x0,k,θ,σ):
+#     K = atm_strike(T)
+#     cap = 0
+#     α = (x0,k,θ,σ)
+#     for Ti in np.arange(τ,T,τ):
+#         cap += (1 + K*τ)*ZBP(Ti,1/(1+K*τ),*α)
+#     return cap
+# cap_CIR = np.vectorize(cap_CIR)
+
+
 def cap_CIR(T,x0,k,θ,σ):
-    K = atm_strike(T)
-    cap = 0
-    α = (x0,k,θ,σ)
-    for Ti in np.arange(τ,T,τ):
-        cap += (1 + K*τ)*ZBP(Ti,1/(1+K*τ),*α)
-    return cap
-cap_CIR = np.vectorize(cap_CIR)
+    '''Value of a cap under the CIR++ model. See B&M p. 104, eq. (3.80)
 
-
-def vec_cap_CIR(T,x0,k,θ,σ):
+    T: maturity of the cap.'''
     T = np.array(T).astype(float)
     try:
         tl = np.max(T)
@@ -199,6 +202,7 @@ def vec_cap_CIR(T,x0,k,θ,σ):
         l = 1
     K = atm_strike(T)
     α = (x0,k,θ,σ)
+    # α = {'x0':x0,'k':k,'θ':θ,'σ
 
     Ts = np.arange(τ,tl,τ)
     Ts = np.tile(Ts,(l,1)).T
@@ -209,15 +213,28 @@ def vec_cap_CIR(T,x0,k,θ,σ):
     return cap
 
 
+def f(T,x0,k,θ,σ):
+    α = (x0,k,θ,σ)
+    price = cap_CIR(T,*α)
+    σ = cap_vol(price,T)
+    return σ
+
+
 if __name__ == '__main__':
     lsc = get_data()
-    (black_params,_) = curve_fit(vec_cap_CIR,lsc['T'],lsc['cap'])
+    (black_params,_) = curve_fit(cap_CIR,lsc['T'],lsc['cap'])
+    # (black_params,_) = curve_fit(f,lsc['T'],lsc['raw_σ'],method='trf')
 
-    for t in np.arange(2*τ,10+τ,τ):
-        price = vec_cap_CIR(t,*black_params)
+    for t in np.arange(2*τ,10+τ,2*τ):
+        price = cap_CIR(t,*black_params)
         σ = cap_vol(price,t)
         lsc.loc[t,'cap'] = price
         lsc.loc[t,'σ'] = σ
         lsc.loc[t,'T'] = t
     lsc = lsc.set_index('T',drop=False)
     lsc = lsc.sort_index()
+
+    lsc[['cap','raw_cap']].plot(style=['-','o'])
+    # lsc[['σ','raw_σ']].plot(style=['-','o'])
+    # plt.axis(ymin=-0.1)
+    plt.show()
