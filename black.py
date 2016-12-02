@@ -137,7 +137,10 @@ def A(t,T,*α):
     # Cf. Brigo & Mercurio2006, Eq. (3.25) p. 66
     x0,k,θ,σ = α
     h = sqrt(k**2 + 2*σ**2)
-    A = (2*h*exp((k+h)*(T-t)/2)/(2*h + (k+h)*exp((T-t)*h - 1)))**(2*k*θ/σ**2)
+    # A = (2*h*exp((k+h)*(T-t)/2)/(2*h + (k+h)*exp((T-t)*h - 1)))**(2*k*θ/σ**2)
+    num = 2*h*exp((k+h)*(T-t)/2)
+    den = 2*h + (k+h)*(exp((T-t)*h) - 1)
+    A = (num/den)**(2*k*θ/σ**2)
     return A
 
 
@@ -156,7 +159,7 @@ def ZBC(T,K,*α):
     b = lambda t,T: B(t,T,*α)
     r_hat = 1/b(T,T+τ) * (log(a(T,T+τ)/K) -
                           log((P(T)*a(0,T+τ)*exp(-b(0,T+τ)*x0)) /
-                              (P(τ)*a(0,T)*exp(-b(0,T)*x0))))
+                              (P(T+τ)*a(0,T)*exp(-b(0,T)*x0))))
     # Eq (3.26) p. 67
     ρ = 2*h/(σ**2*(exp(h*T) - 1))
     ψ = (k+h)/σ**2
@@ -164,7 +167,7 @@ def ZBC(T,K,*α):
     # p. 103
     q1 = 2*r_hat*(ρ+ψ+b(T,T+τ))
     df = 4*k*θ/σ**2
-    nc1 = 2*ρ**2*x0*exp(h*T)/(ρ + ψ + b(T,τ))
+    nc1 = 2*ρ**2*x0*exp(h*T)/(ρ + ψ + b(T,T+τ))
 
     q2 = 2*r_hat*(ρ+ψ)
     nc2 = 2*ρ**2*x0*exp(h*T)/(ρ + ψ)
@@ -222,17 +225,34 @@ def f(T,x0,k,θ,σ):
 
 if __name__ == '__main__':
     lsc = get_data()
-    (black_params,_) = curve_fit(cap_CIR,lsc['T'],lsc['cap'])
-    # (black_params,_) = curve_fit(f,lsc['T'],lsc['raw_σ'],method='trf')
+    # p0 = (0.0059379, 0.3945, 0.02713, 0.2)
+    # p0 =  np.array([3.72454976e-09, 4.02869041e-1, 1.27319313e-01, 6.36323906e-02])
+    p0 = np.array([8.33e-5,0.528,0.032,0.13])
+    # sigma = [1/10,1/10,1/5,1,1,1,1,1/5,1,1]
+    sigma = None
+    # (black_params,_) = curve_fit(cap_CIR,lsc['T'],lsc['cap'],sigma=sigma,max_nfev=10000,method='trf')
+    (black_params,_) = curve_fit(cap_CIR,lsc['T'],lsc['cap'],sigma=sigma,p0=p0,maxfev=10000)
+    # (black_params,_) = curve_fit(f,lsc['T'],lsc['raw_σ'],p0=p0,sigma=sigma)
+
+    # black_params = np.array([3.72454976e-09, 4.02869041e-1, 1.27319313e-01, 6.36323906e-02])
+
+    # black_params = np.array([ 3.72454976e-09, 4.02869041e-1, 1.27319313e-01,
+    #                       6.36323906e-02])
+
+    args = 'x0 k θ σ'.split()
+    black_params = dict(zip(args,black_params))
+    
 
     for t in np.arange(2*τ,10+τ,2*τ):
-        price = cap_CIR(t,*black_params)
+        price = cap_CIR(t,**black_params)
         σ = cap_vol(price,t)
         lsc.loc[t,'cap'] = price
         lsc.loc[t,'σ'] = σ
         lsc.loc[t,'T'] = t
     lsc = lsc.set_index('T',drop=False)
     lsc = lsc.sort_index()
+
+    rmse = sqrt(((lsc.cap - lsc.raw_cap)**2).mean())
 
     lsc[['cap','raw_cap']].plot(style=['-','o'])
     # lsc[['σ','raw_σ']].plot(style=['-','o'])
