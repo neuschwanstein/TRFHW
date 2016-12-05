@@ -28,7 +28,11 @@ def get_data():
     lsc['σ'] = [60.04,63.17,54.78,48.62,44.66,41.34,41.25,41.25,35.15,34.28]
     lsc['σ'] = lsc['σ']/100
     lsc['raw_σ'] = lsc['σ']
+    lsc['l_σ'] = lsc['σ']-0.0001
+    lsc['u_σ'] = lsc['σ']+0.0001
     lsc['cap'] = cap(lsc['T'],lsc['σ'])
+    lsc['u_cap'] = cap(lsc['T'],lsc['u_σ'])
+    lsc['l_cap'] = cap(lsc['T'],lsc['l_σ'])
     lsc['raw_cap'] = lsc['cap']
     lsc = lsc.set_index('T',drop=False)
     return lsc
@@ -73,6 +77,7 @@ def cap_vol(cap_price,T):
     f = lambda σ: cap(T,σ=σ) - cap_price
     return root(f,x0=0.3).x
 cap_vol = np.vectorize(cap_vol)
+
 
 def cap(T,σ,K=None):
     '''Black formula for cap pricing provided a constant volatility σ and maturity.
@@ -182,16 +187,6 @@ def ZBP(T,K,*α):
     return ZBP
 
 
-# def cap_CIR(T,x0,k,θ,σ):
-#     K = atm_strike(T)
-#     cap = 0
-#     α = (x0,k,θ,σ)
-#     for Ti in np.arange(τ,T,τ):
-#         cap += (1 + K*τ)*ZBP(Ti,1/(1+K*τ),*α)
-#     return cap
-# cap_CIR = np.vectorize(cap_CIR)
-
-
 def cap_CIR(T,x0,k,θ,σ):
     '''Value of a cap under the CIR++ model. See B&M p. 104, eq. (3.80)
 
@@ -223,28 +218,34 @@ def f(T,x0,k,θ,σ):
     return σ
 
 
-if __name__ == '__main__':
-    lsc = get_data()
-    # p0 = (0.0059379, 0.3945, 0.02713, 0.2)
-    # p0 =  np.array([3.72454976e-09, 4.02869041e-1, 1.27319313e-01, 6.36323906e-02])
+def get_CIR_params(lsc=None):
+    if lsc is None:
+        lsc = get_data()
+
+    # Initial guess for parameters
     p0 = np.array([8.33e-5,0.528,0.032,0.13])
-    # sigma = [1/10,1/10,1/5,1,1,1,1,1/5,1,1]
-    sigma = None
-    # (black_params,_) = curve_fit(cap_CIR,lsc['T'],lsc['cap'],sigma=sigma,max_nfev=10000,method='trf')
-    (black_params,_) = curve_fit(cap_CIR,lsc['T'],lsc['cap'],sigma=sigma,p0=p0,maxfev=10000)
-    # (black_params,_) = curve_fit(f,lsc['T'],lsc['raw_σ'],p0=p0,sigma=sigma)
 
-    # black_params = np.array([3.72454976e-09, 4.02869041e-1, 1.27319313e-01, 6.36323906e-02])
+    # Inverse weight (precision) of measurements
+    sigma = [1,1/12,1/2,1,1,1,1,1/8,1/4,1/4]
 
-    # black_params = np.array([ 3.72454976e-09, 4.02869041e-1, 1.27319313e-01,
-    #                       6.36323906e-02])
+    # Fitting of cap prices
+    (cir_params,_) = curve_fit(cap_CIR,lsc['T'],lsc['cap'],sigma=sigma,p0=p0,maxfev=10000)
 
     args = 'x0 k θ σ'.split()
-    black_params = dict(zip(args,black_params))
-    
+    cir_params = dict(zip(args,cir_params))
 
+    return cir_params
+
+
+if __name__ == '__main__':
+    lsc = get_data()
+    cir_params = get_CIR_params()
+
+    T = np.arange(2*τ,10+τ,2*τ)
+
+    # Update of results datastructure
     for t in np.arange(2*τ,10+τ,2*τ):
-        price = cap_CIR(t,**black_params)
+        price = cap_CIR(t,**cir_params)
         σ = cap_vol(price,t)
         lsc.loc[t,'cap'] = price
         lsc.loc[t,'σ'] = σ
@@ -254,7 +255,7 @@ if __name__ == '__main__':
 
     rmse = sqrt(((lsc.cap - lsc.raw_cap)**2).mean())
 
-    lsc[['cap','raw_cap']].plot(style=['-','o'])
-    # lsc[['σ','raw_σ']].plot(style=['-','o'])
-    # plt.axis(ymin=-0.1)
+    # lsc[['cap','raw_cap']].plot(style=['-','o'])
+    lsc[['σ','raw_σ']].plot(style=['-','o'])
+    plt.axis(xmin=0)
     plt.show()

@@ -207,6 +207,7 @@ def unified_opt(lsc):
     curve_fit(unified_ns,ts,raws)
 
 
+
 if __name__ == '__main__':
     lsc = get_data()
     # try:
