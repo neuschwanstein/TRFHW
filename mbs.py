@@ -32,21 +32,26 @@ def f_cir(t,x0,k,θ,σ):
     return f_cir
 
 
-def φ_cir(t,*α):
-    φ = f_m(t) - f_cir(t,*α)
+def φ_cir(t,**α):
+    φ = f_m(t) - f_cir(t,**α)
     return φ
 
 
-def CIR_process(T,x0,k,θ,σ):
-    t = np.arange(0,T+τ,τ)
-    x = np.empty_like(t)
-    for i in range(len(x)):
-        if i == 0:
-            x[i] = x0
-            continue
-        x[i] = x[i-1] + k*(θ-x[i-i])*τ + σ*sqrt(x[i-1])*np.random.normal(0,1)
+def x_maturity(T,x0,k,θ,σ):
+    # Glasserman p.124
+    d = 4*θ*k/σ**2
+    x = np.empty(1/τ*T)
+    x[0] = x0
+    for i in np.arange(1,1/τ*T):
+        c = σ**2*(1-exp(-k*τ))/(4*k)
+        λ = x[i-1]*exp(-k*τ)/c
+        x[i] = c*np.random.noncentral_chisquare(d-1,λ)
+    return x
 
-    r = x + φ_cir(t,x0,k,θ,σ)
+
+def CIR_process(T,**α):
+    t = np.arange(1/τ*T)
+    r = x(T,**α) + φ_cir(t,**α)
     return r
 
 
