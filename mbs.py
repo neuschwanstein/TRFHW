@@ -2,19 +2,9 @@ from functools import partial
 
 import numpy as np
 from numpy import sqrt,exp
-import matplotlib.pyplot as plt
 
-from zero import get_ns_params,forward_ns,zero_ns
-
-τ = 1/12
-
-# Get NS params for zero curve and zero forward curve
-try:
-    zero_params
-except NameError:
-    [zero_params,_] = get_ns_params()
-f_m = partial(forward_ns,**zero_params)
-R = partial(zero_ns,**zero_params)
+from zero import forward_zero_curve as f_m
+from black import cir_params, load_cir_params
 
 
 def coupon(L,r,T,τ=1/12):
@@ -37,13 +27,13 @@ def φ_cir(t,**α):
     return φ
 
 
-def x_maturity(T,x0,k,θ,σ):
+def x_process(T,τ,x0,k,θ,σ):
     # Glasserman p.124
     d = 4*θ*k/σ**2
     x = np.empty(1/τ*T)
+    c = σ**2*(1-exp(-k*τ))/(4*k)
     x[0] = x0
     for i in np.arange(1,1/τ*T):
-        c = σ**2*(1-exp(-k*τ))/(4*k)
         λ = x[i-1]*exp(-k*τ)/c
         x[i] = c*np.random.noncentral_chisquare(d-1,λ)
     return x
@@ -51,10 +41,10 @@ def x_maturity(T,x0,k,θ,σ):
 
 def CIR_process(T,**α):
     t = np.arange(1/τ*T)
-    r = x(T,**α) + φ_cir(t,**α)
+    r = x_process(T,**α) + φ_cir(t,**α)
     return r
 
 
 if __name__ == '__main__':
-    c = coupon(L=100000,r=0.0756,T=5,τ=1/2)
-    print(c)
+    if cir_params is None:
+        load_cir_params()

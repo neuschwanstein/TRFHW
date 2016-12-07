@@ -10,6 +10,7 @@ from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
 
 τ = 3/12
+ns_params = None
 
 
 def forward_ns(t,β0,β1,β2,β3,θ1,θ2):
@@ -143,9 +144,10 @@ def get_data():
     return lsc
 
 
-def get_ns_params(lsc=None):
-    if lsc is None:
-        lsc = get_data()
+def load_ns_params():
+    global ns_params
+
+    lsc = get_data()
 
     interpolate_swaps(lsc,T1=9/12,T2=9/12,method=cubic_interp)
     interpolate_swaps(lsc,T1=1,T2=2,method=cubic_interp)
@@ -159,67 +161,41 @@ def get_ns_params(lsc=None):
     sigma = [1/10,1,1/10] + [1]*(len(points)-3)
     [params,cov] = curve_fit(zero_ns,points['T'],points['r'],
                              max_nfev=8000,method='trf',sigma=sigma)
-    # [params,cov] = curve_fit(zero_ns,points['T'],points['r'])
 
     args = 'β0 β1 β2 β3 θ1 θ2'.split()
-    params = dict(zip(args,params))
-    return [params,cov]
+    ns_params = dict(zip(args,params))
 
 
-def get_interpolated_data(lsc=None,params=None):
-    if params is None:
-        [params,cov] = get_ns_params(lsc)
-    zero_curve = partial(zero_ns,**params)
-    update_zerorates_from_zerocurve(lsc,zero_curve,T1=0,T2=10)
-    return lsc
+def zero_curve(t):
+    if ns_params is None:
+        load_ns_params()
+    return partial(zero_ns,**ns_params)(t)
 
 
-# TODO: Remove from code if unused.
-def unified_opt(lsc):
-    '''Experimental.'''
-    def unified_ns(t,β0,β1,β2,β3,θ1,θ2):
+def forward_zero_curve(t):
+    if ns_params is None:
+        load_ns_params()
+    return partial(forward_ns,**ns_params)(t)
 
-        def swap_curve(t):
-            return β0 + \
-                β1*((1-exp(-t/θ1))/(t/θ1)) + \
-                β2*((1-exp(-t/θ1))/(t/θ1) - exp(-t/θ1)) + \
-                β3*((1-exp(-t/θ2))/(t/θ2) - exp(-t/θ2))
 
-        Ts = np.arange(τ,10+τ,τ)
-        for T in Ts:
-            lsc.loc[T,'swap'] = swap_curve(T)
-            lsc.loc[T,'T'] = T
+def zero_price(T):
+    '''Price of zero coupon'''
+    R = zero_curve
+    T = np.array(T)
+    P = np.exp(-T*R(T))
+    return P
 
-        update_prices_from_swaps(lsc)
-        update_zerorates_from_prices(lsc)
 
-        result = lsc.loc[t[t<1],'r'].append(lsc.loc[t[t>=1],'swap'])
-        return result
-
-    ts = np.array([1/12,3/12,6/12,1,2,3,4,5,7,10])
-    raw_rs = lsc.loc[~lsc['raw_r'].isnull(),'raw_r']
-    raw_rs = raw_rs[ts[ts<1]]
-
-    raw_swaps = lsc.loc[~lsc['raw_swap'].isnull(),'raw_swap']
-    raw_swaps = raw_swaps[ts[ts>=1]]
-
-    raws = raw_rs.append(raw_swaps)
-    curve_fit(unified_ns,ts,raws)
-
+def forward_rate(T1,T2):
+    '''Forward rate (simple compounding) F(T1,T2)'''
+    P = zero_price
+    τ = T2 - T1
+    F = 1/τ*(P(T1)/P(T2) - 1)
+    return F
 
 
 if __name__ == '__main__':
-    lsc = get_data()
-    # try:
-    #     lsc = get_interpolated_data(lsc,params)
-    # except NameError:
-    [params,_] = get_ns_params()
-    lsc = get_interpolated_data(lsc,params)
-
-    zero_curve = partial(zero_ns,**params)
-    forward_curve = partial(forward_ns,**params)
     t = np.linspace(0,10,10000)
-    # lsc['r'].plot()
-    plt.plot(t,zero_curve(t),t,forward_curve(t))
+    plt.plot(t,zero_curve(t),t,forward_zero_curve(t))
     plt.legend(['Zero spot rates','Zero Forward Rates'],loc='lower right')
     plt.show()

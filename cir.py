@@ -1,24 +1,17 @@
-from functools import partial
-
 import pandas as pd
 import numpy as np
 from numpy import sqrt,exp,log
 from scipy.stats import norm,ncx2
 from scipy.optimize import root,curve_fit
+
+from zero import zero_price as P, forward_rate as F, forward_zero_curve as f_m
+
+τ = 3/12
 Φ = norm.cdf
 χ2 = ncx2.cdf
 
-from zero import get_ns_params,forward_ns,zero_ns
-
-τ = 3/12
-
-# Get NS params for zero curve and zero forward curve
-try:
-    zero_params
-except NameError:
-    [zero_params,_] = get_ns_params()
-f_m = partial(forward_ns,**zero_params)
-R = partial(zero_ns,**zero_params)
+if 'cir_params' not in locals():
+    cir_params = None
 
 
 def get_data():
@@ -28,31 +21,26 @@ def get_data():
     lsc['σ'] = [60.04,63.17,54.78,48.62,44.66,41.34,41.25,41.25,35.15,34.28]
     lsc['σ'] = lsc['σ']/100
     lsc['raw_σ'] = lsc['σ']
-    lsc['l_σ'] = lsc['σ']-0.0001
-    lsc['u_σ'] = lsc['σ']+0.0001
     lsc['cap'] = cap(lsc['T'],lsc['σ'])
-    lsc['u_cap'] = cap(lsc['T'],lsc['u_σ'])
-    lsc['l_cap'] = cap(lsc['T'],lsc['l_σ'])
     lsc['raw_cap'] = lsc['cap']
     lsc = lsc.set_index('T',drop=False)
     return lsc
 
 
-def P(T):
-    '''Price of zero coupon (no discount if t = 0)'''
-    T = np.array(T)
-    P = np.exp(-T*R(T))
-    return P
+def f_cir(t,x0,k,θ,σ):
+    # Cf. Brigo & Mercurio2006, Eq. (3.77) p. 102
+    h = sqrt(k**2 + 2*σ**2)
+    num1 = 2*k*θ*(exp(t*h) - 1)
+    den1 = 2*h + (k+h)*(exp(t*h) - 1)
+    num2 = 4*h**2*exp(t*h)
+    den2 = (2*h + (k+h)*(exp(t*h) - 1))**2
+    # f_cir = 2*k*θ*(exp(t*h) - 1)/(2*h + (k+h)*(exp(t*h) - 1)) + \
+    # x0 * 4*h**2*exp(t*h)/(2*h + (k+h)*(exp(t*h) - 1))**2
+    f_cir = num1/den1 + x0*num2/den2
+    return f_cir
 
 
-def F(T1,T2):
-    '''Forward rate (simple compounding) F(T1,T2)'''
-    τ = T2 - T1
-    F = 1/τ*(P(T1)/P(T2) - 1)
-    return F
-
-
-def atm_strike(T):
+def swap_rate(T):
     # Although ugly, waay faster when it's properly vectorized.
     T = np.array(T).astype(float)
     try:
@@ -89,7 +77,7 @@ def cap(T,σ,K=None):
     T = np.array(T).astype(float)
     σ = np.array(σ).astype(float)
     if K is None:
-        K = atm_strike(T)
+        K = swap_rate(T)
     try:
         tl = np.max(T)
         l = len(T)
@@ -109,33 +97,6 @@ def cap(T,σ,K=None):
     caplets = np.ma.array(caplets,mask=Ts>T)
     cap = caplets.sum(axis=0).data
     return cap
-
-#     if K is None:
-#         K = atm_strike(T)
-#     cap = 0
-#     for Ti in np.arange(2*τ,T+τ,τ):
-#         v = σ*sqrt(Ti - τ)
-#         Fi = F(Ti-τ,Ti)
-#         d1 = (log(Fi/K) + v**2/2)/v
-#         d2 = (log(Fi/K) - v**2/2)/v
-#         Bl = Fi*Φ(d1) - K*Φ(d2)
-#         cap += P(Ti)*Bl
-#     return cap*τ
-# cap = np.vectorize(cap)
-
-
-# def f_cir(t,*α):
-#     # Cf. Brigo & Mercurio2006, Eq. (3.77) p. 102
-#     x0,k,θ,σ = α.values()
-#     h = sqrt(k**2 + 2*σ**2)
-#     f_cir = 2*k*θ*(exp(t*h) - 1)/(2*h + (k+h)*(exp(t*h) - 1)) + \
-#         x0 * 4*h**2*exp(t*h)/(2*h + (k+h)*(exp(t*h) - 1))**2
-#     return f_cir
-
-
-# def φ_cir(t,*α):
-#     φ = f_m(t) - f_cir(t,α)
-#     return φ
 
 
 def A(t,T,*α):
@@ -198,7 +159,7 @@ def cap_CIR(T,x0,k,θ,σ):
     except TypeError:
         tl = T
         l = 1
-    K = atm_strike(T)
+    K = swap_rate(T)
     α = (x0,k,θ,σ)
     # α = {'x0':x0,'k':k,'θ':θ,'σ
 
@@ -211,51 +172,89 @@ def cap_CIR(T,x0,k,θ,σ):
     return cap
 
 
-def f(T,x0,k,θ,σ):
-    α = (x0,k,θ,σ)
-    price = cap_CIR(T,*α)
-    σ = cap_vol(price,T)
-    return σ
+def load_cir_params():
+    global cir_params
 
-
-def get_CIR_params(lsc=None):
-    if lsc is None:
-        lsc = get_data()
+    lsc = get_data()
 
     # Initial guess for parameters
-    p0 = np.array([8.33e-5,0.528,0.032,0.13])
-
+    p0 = np.array([8.33e-5,0.528,0.028,0.13])
     # Inverse weight (precision) of measurements
-    sigma = [1,1/12,1/2,1,1,1,1,1/8,1/4,1/4]
-
+    # sigma = [1,1/12,1/2,1,1,1,1,1/8,1/4,1/4]
     # Fitting of cap prices
-    (cir_params,_) = curve_fit(cap_CIR,lsc['T'],lsc['cap'],sigma=sigma,p0=p0,maxfev=10000)
+    (cir_params,_) = curve_fit(cap_CIR,lsc['T'],lsc['cap'],
+                               bounds=([-np.inf,-np.inf,-np.inf,-np.inf],
+                                       [np.inf,np.inf,f_m(10),np.inf]),
+                               p0=p0)
+    #,sigma=sigma,p0=p0,maxfev=10000)
 
     args = 'x0 k θ σ'.split()
     cir_params = dict(zip(args,cir_params))
 
-    return cir_params
+
+def cir_process(T,τ,N,x0,k,θ,σ):
+    '''CIR process implementation.'''
+    m = int(T/τ)+1
+    x = np.empty((m,N))
+
+    # Glasserman p.124
+    d = 4*θ*k/σ**2
+    c = σ**2*(1-exp(-k*τ))/(4*k)
+    x[0,:] = x0
+    for i in range(1,m):
+        λ = x[i-1]*exp(-k*τ)/c
+        x[i,:] = c*np.random.noncentral_chisquare(d,λ,N)
+
+    lsc = pd.DataFrame(x,columns=['x_' + str(i) for i in range(N)])
+    lsc['T'] = np.arange(0,T+τ-1e-5,τ)  # Not too pretty hack...
+    lsc = lsc.set_index('T')
+    return lsc
+
+
+def φ(t,**α):
+    φ = f_m(t) - f_cir(t,**α)
+    return φ
+
+
+def r_process(T,τ,N,**α):
+    x = cir_process(T,τ,N,**α)
+    correction = φ(x.index.values,**α)
+    r = (x.T + correction).T
+    return r
+
+
+def P_cir(T,τ,N,**α):
+    r = r_process(T,τ,N,**α)
+    P = exp((-r.cumsum(axis=0)*τ)).mean(axis=1)
+    return P
+
 
 
 if __name__ == '__main__':
-    lsc = get_data()
-    cir_params = get_CIR_params()
+    # if cir_params is None:
+    #     load_cir_params()
 
-    T = np.arange(2*τ,10+τ,2*τ)
+    # lsc = get_data()
+    # T = np.arange(2*τ,10+τ,2*τ)
 
-    # Update of results datastructure
-    for t in np.arange(2*τ,10+τ,2*τ):
-        price = cap_CIR(t,**cir_params)
-        σ = cap_vol(price,t)
-        lsc.loc[t,'cap'] = price
-        lsc.loc[t,'σ'] = σ
-        lsc.loc[t,'T'] = t
-    lsc = lsc.set_index('T',drop=False)
-    lsc = lsc.sort_index()
+    # # Update of results datastructure
+    # for t in np.arange(1,11):
+    #     price = cap_CIR(t,**cir_params)
+    #     σ = cap_vol(price,t)
+    #     lsc.loc[t,'cap'] = price
+    #     lsc.loc[t,'σ'] = σ
+    #     lsc.loc[t,'T'] = t
+    # lsc = lsc.set_index('T',drop=False)
+    # lsc = lsc.sort_index()
 
-    rmse = sqrt(((lsc.cap - lsc.raw_cap)**2).mean())
+    # rmse = sqrt(((lsc.cap - lsc.raw_cap)**2).mean())
 
     # lsc[['cap','raw_cap']].plot(style=['-','o'])
-    lsc[['σ','raw_σ']].plot(style=['-','o'])
-    plt.axis(xmin=0)
+    # # lsc[['σ','raw_σ']].plot(style=['-','o'])
+    # plt.axis(xmin=0)
+    # plt.show()
+
+    ts = np.linspace(0,10,10000)
+    plt.plot(ts,f_m(ts))
+    forw = r_process(10,1/24,5000,**cir_params).mean(axis=1).plot(legend=False)
     plt.show()
