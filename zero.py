@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from math import nan
 from functools import partial
 
@@ -8,6 +10,9 @@ from scipy.optimize import curve_fit
 from scipy.interpolate import interp1d
 
 import matplotlib.pyplot as plt
+from matplotlib import rc
+rc('font',**{'family':'serif','serif':['Computer Modern Roman']})
+rc('text',usetex=True)
 
 τ = 3/12
 ns_params = None
@@ -144,9 +149,7 @@ def get_data():
     return lsc
 
 
-def load_ns_params():
-    global ns_params
-
+def interpolate_curve():
     lsc = get_data()
 
     interpolate_swaps(lsc,T1=9/12,T2=9/12,method=cubic_interp)
@@ -157,10 +160,18 @@ def load_ns_params():
     interpolate_swaps(lsc,T1=5,T2=7,method=cubic_interp)
     interpolate_swaps(lsc,T1=7,T2=10,method=linear_interp)
 
-    points = lsc[~lsc['r'].isnull()]
-    sigma = [1/10,1,1/10] + [1]*(len(points)-3)
-    [params,cov] = curve_fit(zero_ns,points['T'],points['r'],
-                             max_nfev=8000,method='trf',sigma=sigma)
+    return lsc
+
+
+def load_ns_params():
+    global ns_params
+
+    lsc = interpolate_curve()
+    sigma = [1/10,1/6,1/10,1,1/15] + [1]*(len(lsc)-6) + [1/20]
+    [params,cov] = curve_fit(zero_ns,lsc['T'],lsc['r'],
+                             max_nfev=8000,
+                             method='trf',
+                             sigma=sigma)
 
     args = 'β0 β1 β2 β3 θ1 θ2'.split()
     ns_params = dict(zip(args,params))
@@ -194,8 +205,24 @@ def forward_rate(T1,T2):
     return F
 
 
-if __name__ == '__main__':
+def _r_fwd():
     t = np.linspace(0,10,10000)
     plt.plot(t,zero_curve(t),t,forward_zero_curve(t))
-    plt.legend(['Zero spot rates','Zero Forward Rates'],loc='lower right')
+    plt.legend(['Taux spot',u'Taux forward instantane'],loc='lower right')
+    plt.xlabel('$T$')
     plt.show()
+
+
+def _r_raw():
+    lsc = get_data()
+    t = np.linspace(0,10.5,10000)
+    plt.plot(t,zero_curve(t))
+    plt.plot(t,forward_zero_curve(t))
+    lsc['raw_r'].plot(style='o')
+    lsc['raw_swap'][1:].plot(style='o')
+    plt.xlabel('$T$')
+    plt.show()
+
+
+if __name__ == '__main__':
+    load_ns_params()

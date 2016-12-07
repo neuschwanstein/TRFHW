@@ -174,19 +174,26 @@ def cap_CIR(T,x0,k,θ,σ):
 
 def load_cir_params():
     global cir_params
+    global x0,k,θ,σ
 
     lsc = get_data()
 
     # Initial guess for parameters
-    p0 = np.array([8.33e-5,0.528,0.028,0.13])
+    p0 = np.array([1,5,0.01,0.1])
+    # p0 = None
     # Inverse weight (precision) of measurements
     # sigma = [1,1/12,1/2,1,1,1,1,1/8,1/4,1/4]
     # Fitting of cap prices
     (cir_params,_) = curve_fit(cap_CIR,lsc['T'],lsc['cap'],
-                               bounds=([-np.inf,-np.inf,-np.inf,-np.inf],
-                                       [np.inf,np.inf,f_m(10),np.inf]),
-                               p0=p0)
+                               bounds=([1,-np.inf,-np.inf,0],
+                                       [np.inf,np.inf,0.5,np.inf]),
+                               p0=p0,
+                               max_nfev=10000,
+                               method='trf')
     #,sigma=sigma,p0=p0,maxfev=10000)
+
+    x0,k,θ,σ = cir_params
+    assert(2*k*θ > σ**2)
 
     args = 'x0 k θ σ'.split()
     cir_params = dict(zip(args,cir_params))
@@ -229,8 +236,53 @@ def P_cir(T,τ,N,**α):
     return P
 
 
+def _cap_prices():
+    if cir_params is None:
+        load_cir_params()
+
+    lsc = get_data()
+
+    # Update of results datastructure
+    for t in np.arange(1,11):
+        price = cap_CIR(t,**cir_params)
+        σ = cap_vol(price,t)
+        lsc.loc[t,'cap'] = price
+        lsc.loc[t,'σ'] = σ
+        lsc.loc[t,'T'] = t
+    lsc = lsc.set_index('T',drop=False)
+    lsc = lsc.sort_index()
+
+    # rmse = sqrt(((lsc.cap - lsc.raw_cap)**2).mean())  # 
+
+    lsc[['cap','raw_cap']].plot(style=['-','o'],legend=None)
+    # lsc[['σ','raw_σ']].plot(style=['-','o'])
+    plt.axis(xmin=0)
+    plt.show()    
+
+
+def _r_processes(N=25):
+    r_process(10,1/12,N,**cir_params).plot(legend=False)
+    plt.show()
+
+
+def _mean_r(N=25):
+    ts = np.linspace(0,10,10000)
+    plt.plot(ts,f_m(ts))
+    rs = r_process(10,1/24,5000,**cir_params)
+    μ = rs.mean(axis=1)
+    std = rs.std(axis=1)
+    (μ+std).plot()
+    (μ).plot()
+    (μ-std).plot()
+    plt.show()
+
 
 if __name__ == '__main__':
+    load_cir_params()
+    # cir_params
+    # r_process(10,1/12,25,**cir_params).plot(legend=False)
+    # plt.show()
+
     # if cir_params is None:
     #     load_cir_params()
 
@@ -254,7 +306,8 @@ if __name__ == '__main__':
     # plt.axis(xmin=0)
     # plt.show()
 
-    ts = np.linspace(0,10,10000)
-    plt.plot(ts,f_m(ts))
-    forw = r_process(10,1/24,5000,**cir_params).mean(axis=1).plot(legend=False)
-    plt.show()
+    # # Show Er(t) == f(0,t)
+    # ts = np.linspace(0,10,10000)
+    # plt.plot(ts,f_m(ts))
+    # forw = r_process(10,1/24,5000,**cir_params).mean(axis=1).plot(legend=False)
+    # plt.show()
