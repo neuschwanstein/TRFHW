@@ -4,7 +4,7 @@ from numpy import sqrt,exp,log
 from scipy.stats import norm,ncx2
 from scipy.optimize import root,curve_fit
 
-from zero import zero_price as P, forward_rate as F, forward_zero_curve as f_m
+from zero import zero_price as P, forward_rate as F, forward_zero_curve as f_m, zero_curve as R
 
 τ = 3/12
 Φ = norm.cdf
@@ -198,6 +198,8 @@ def load_cir_params():
     args = 'x0 k θ σ'.split()
     cir_params = dict(zip(args,cir_params))
 
+    return cir_params
+
 
 def cir_process(T,τ,N,x0,k,θ,σ):
     '''CIR process implementation.'''
@@ -224,6 +226,8 @@ def φ(t,**α):
 
 
 def r_process(T,τ,N,**α):
+    if not α:
+        α = load_cir_params()
     x = cir_process(T,τ,N,**α)
     correction = φ(x.index.values,**α)
     r = (x.T + correction).T
