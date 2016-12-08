@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 from numpy import log,exp
 from scipy.optimize import curve_fit
-from scipy.interpolate import interp1d
+from scipy.interpolate import interp1d,pchip
 
 import matplotlib.pyplot as plt
 from matplotlib import rc
@@ -18,12 +18,22 @@ rc('text',usetex=True)
 ns_params = None
 
 
+def forward_sns(t,β0,β1,β2,θ):
+    '''Simple forward rates'''
+    return forward_ns(t,β0,β1,β2,β3=0,θ1=θ,θ2=0)
+
+
 def forward_ns(t,β0,β1,β2,β3,θ1,θ2):
     '''Zero Foward rates with Nelson-Seigel'''
     return β0 + \
         β1*exp(-t/θ1) + \
         β2*t/θ1*exp(-t/θ1) + \
         β3*t/θ2*exp(-t/θ2)
+
+
+def zero_sns(t,β0,β1,β2,θ):
+    '''Simple forward rates'''
+    return zero_ns(t,β0,β1,β2,β3=0,θ1=θ,θ2=0)
 
 
 def zero_ns(t,β0,β1,β2,β3,θ1,θ2):
@@ -38,6 +48,7 @@ def zero_ns(t,β0,β1,β2,β3,θ1,θ2):
     t = np.array(t).astype(float)
     R = np.zeros_like(t)
     R[t != 0] = zero_ns(t[t != 0],β0,β1,β2,β3,θ1,θ2)
+    R[t == 0] = β0 + β1
     return R
 
 
@@ -167,7 +178,7 @@ def load_ns_params():
     global ns_params
 
     lsc = interpolate_curve()
-    sigma = [1/10,1/6,1/10,1,1/15] + [1]*(len(lsc)-6) + [1/20]
+    sigma = [1/10,1/6,1/10,1/10,1/15] + [1]*(len(lsc)-6) + [1/20]
     [params,cov] = curve_fit(zero_ns,lsc['T'],lsc['r'],
                              max_nfev=8000,
                              method='trf',
@@ -177,10 +188,44 @@ def load_ns_params():
     ns_params = dict(zip(args,params))
 
 
+def load_sns_params():
+    global sns_params
+
+    lsc = interpolate_curve()
+    # lsc = lsc[(lsc['T'] <= 1/12) | (lsc['T'] >= 2)]
+    # lsc.loc[1/2,'r'] = 0.16/100
+    # lsc = lsc[lsc['T'] != 1/4]
+    # lsc = lsc[lsc['T'] != 3/4]
+    # sigma = [1/10,1/10,1,1,1/15] + [1]*(len(lsc)-6) + [1/20]
+    lsc.loc[1/4,'r'] = 0.0023
+    lsc.loc[1,'r'] = 0.004
+    sigma = [1/4,1/4,2,2,1/10] + [1]*(len(lsc)-6) + [1]
+    [params,cov] = curve_fit(zero_ns,lsc['T'],lsc['r'],
+                             max_nfev=8000,
+                             sigma=sigma,
+                             method='trf')
+
+    args = 'β0 β1 β2 β3 θ1 θ2'.split()
+    # args =  'β0 β1 β2 θ'.split()
+    sns_params = dict(zip(args,params))
+
+
 def zero_curve(t):
     if ns_params is None:
         load_ns_params()
     return partial(zero_ns,**ns_params)(t)
+
+
+def szero_curve(t):
+    if sns_params is None:
+        load_sns_params()
+    return partial(zero_ns,**sns_params)(t)
+
+
+def sforward_zero_curve(t):
+    if sns_params is None:
+        load_sns_params()
+    return partial(forward_ns,**sns_params)(t)
 
 
 def forward_zero_curve(t):
@@ -224,5 +269,16 @@ def _r_raw():
     plt.show()
 
 
+def _sr():
+    lsc = get_data()
+    t = np.linspace(0,10.5,10000)
+    plt.plot(t,zero_curve(t))
+    plt.plot(t,szero_curve(t))
+    lsc['raw_r'].plot(style='o')
+    lsc['raw_swap'][1:].plot(style='o')
+    plt.xlabel('$T$')
+    plt.show()
+
+
 if __name__ == '__main__':
-    load_ns_params()
+    load_sns_params()

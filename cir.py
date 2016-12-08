@@ -179,14 +179,14 @@ def load_cir_params():
     lsc = get_data()
 
     # Initial guess for parameters
-    p0 = np.array([1,5,0.01,0.1])
+    p0 = np.array([0.0001,0.6,0.01,0.08])
     # p0 = None
     # Inverse weight (precision) of measurements
     # sigma = [1,1/12,1/2,1,1,1,1,1/8,1/4,1/4]
     # Fitting of cap prices
     (cir_params,_) = curve_fit(cap_CIR,lsc['T'],lsc['cap'],
-                               bounds=([1,-np.inf,-np.inf,0],
-                                       [np.inf,np.inf,0.5,np.inf]),
+                               bounds=([-np.inf,-np.inf,-np.inf,0],
+                                       [R(0),np.inf,10*f_m(10),0.125]),
                                p0=p0,
                                max_nfev=10000,
                                method='trf')
@@ -262,6 +262,7 @@ def _cap_prices():
 
 def _r_processes(N=25):
     r_process(10,1/12,N,**cir_params).plot(legend=False)
+    plt.plot([0,10],[0,0],'--k',linewidth=2)
     plt.show()
 
 
