@@ -1,10 +1,19 @@
 import pandas as pd
 import numpy as np
 
-from zero import zero_price as P
+from zero import zero_price as P, marginal_zero_change
 from cir import r_process
 
 τ = 1/12
+T = 5                           # Maturity
+# τ = 1/12                        # Rate of payment
+N = 500000                         # #simulation
+r = 5.93/100                    # mortgage rate
+rc = 5.5/100                    # Coupon rate
+
+L0 = 7326596                    # Initial Principal
+A = 1/(1+r*τ)
+C0 = L0/sum(A**i for i in range(1,60+1))  # Initial coupon
 
 
 def compute_details(p):
@@ -92,20 +101,42 @@ def po(p):
     return po
 
 
+def duration(delta):
+    # Baseline, no shift in the curve
+    marginal_zero_change(0)     # Reset baseline
+    rs = r_process(T,τ,N)
+    cprs = 0.07 + 1.05*np.maximum((0.0594 - (0.00837 + 0.905*rs)),0)
+    ps = 1 - (1-cprs)**(1/12)
+    ios,pos = faster(ps)
+
+    # Up shift of delta in the zero curve level
+    marginal_zero_change(delta)
+    rs = r_process(T,τ,N)
+    cprs = 0.07 + 1.05*np.maximum((0.0594 - (0.00837 + 0.905*rs)),0)
+    ps = 1 - (1-cprs)**(1/12)
+    ios_plus,pos_plus = faster(ps)
+
+    # Down shift of delta in the zero curve level
+    marginal_zero_change(-delta)
+    rs = r_process(T,τ,N)
+    cprs = 0.07 + 1.05*np.maximum((0.0594 - (0.00837 + 0.905*rs)),0)
+    ps = 1 - (1-cprs)**(1/12)
+    ios_minus,pos_minus = faster(ps)
+
+    deriv_ios = (ios_plus - ios_minus)/(2*delta)
+    deriv_pos = (pos_plus - pos_minus)/(2*delta)
+
+    dur_ios = - 1/ios*deriv_ios
+    dur_pos = - 1/pos*deriv_pos
+
+    return dur_ios,dur_pos
+
+
 if __name__ == '__main__':
-    T = 5                           # Maturity
-    # τ = 1/12                        # Rate of payment
-    N = 100000                         # #simulation
-    r = 5.93/100                    # mortgage rate
-    rc = 5.5/100                    # Coupon rate
-
-    L0 = 7326596                    # Initial Principal
-    A = 1/(1+r*τ)
-    C0 = L0/sum(A**i for i in range(1,60+1))  # Initial coupon
-
     rs = r_process(T,τ,N)
 
     cprs = 0.07 + 1.05*np.maximum((0.0594 - (0.00837 + 0.905*rs)),0)
     ps = 1 - (1-cprs)**(1/12)
 
     ios,pos = faster(ps)
+    print('Done.')

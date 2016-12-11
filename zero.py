@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 from math import nan
 from functools import partial
 
@@ -16,6 +14,12 @@ rc('text',usetex=True)
 
 τ = 3/12
 ns_params = None
+delta = 0
+
+
+def marginal_zero_change(d):
+    global delta
+    delta = d
 
 
 def forward_sns(t,β0,β1,β2,θ):
@@ -213,7 +217,7 @@ def load_sns_params():
 def zero_curve(t):
     if ns_params is None:
         load_ns_params()
-    return partial(zero_ns,**ns_params)(t)
+    return partial(zero_ns,**ns_params)(t) + delta
 
 
 def szero_curve(t):
@@ -231,7 +235,7 @@ def sforward_zero_curve(t):
 def forward_zero_curve(t):
     if ns_params is None:
         load_ns_params()
-    return partial(forward_ns,**ns_params)(t)
+    return partial(forward_ns,**ns_params)(t) + delta
 
 
 def zero_price(T):
