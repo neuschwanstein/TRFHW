@@ -186,7 +186,7 @@ def load_cir_params():
     # Fitting of cap prices
     (cir_params,_) = curve_fit(cap_CIR,lsc['T'],lsc['cap'],
                                bounds=([-np.inf,-np.inf,-np.inf,0],
-                                       [R(0),np.inf,10*f_m(10),0.125]),
+                                       [R(0),np.inf,1.25*f_m(10),0.15]),
                                p0=p0,
                                max_nfev=10000,
                                method='trf')
