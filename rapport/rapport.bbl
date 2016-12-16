@@ -4,11 +4,21 @@
 D.~Brigo and F.~Mercurio.
 \newblock {\em Interest rate models-theory and practice: with smile, inflation
   and credit}.
-\newblock Springer Science \&amp; Business Media, 2007.
+\newblock Springer Science \& Business Media, 2007.
+
+\bibitem{conn2000trust}
+A.~R. Conn, N.~I. Gould, and P.~L. Toint.
+\newblock {\em Trust region methods}, volume~1.
+\newblock Siam, 2000.
 
 \bibitem{diebold}
 F.~X. Diebold and C.~Li.
 \newblock Forecasting the term structure of government bond yields.
 \newblock {\em Journal of econometrics}, 130(2):337--364, 2006.
+
+\bibitem{veronesi}
+P.~Veronesi.
+\newblock {\em Fixed income securities: Valuation, risk, and risk management}.
+\newblock John Wiley \&amp; Sons, 2010.
 
 \end{thebibliography}

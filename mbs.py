@@ -6,7 +6,7 @@ from cir import r_process
 
 τ = 1/12
 T = 5                           # Maturity
-N = 1                         # #simulation
+N = 1000                         # #simulation
 r = 5.93/100                    # mortgage rate
 rc = 5.5/100                    # Coupon rate
 
@@ -48,18 +48,29 @@ def compute_details(p):
 def table_details(p):
     z = compute_details(p)
     z['T'] = z['T']/12
-    z['$p$'] = z['p']
-    z['Coupon'] = z['C']
-    z['Principal'] = z['L']
-    z[r"Princ. prépayé"] = z['PP']
-    z['Int.'] = z['MI']
+
+    l_ch = {'p':'$p$','C':'Coupon','L':'Principal',
+            'PP':'Princ. prépayé','MI':'Int.',
+            'SP':'Princ. anticipé','PTI':'Int. transféré'}
+    for old,new in l_ch.items():
+        z[new] = z[old]
+
+    # z['$p$'] = z['p']
+    # z['Coupon'] = z['C']
+    # z['Principal'] = z['L']
+    # z[r"Princ. prépayé"] = z['PP']
+    # z['Int.'] = z['MI']
+
     to_money = lambda s: r"\num{%0.2f}\$" % s
-    to_num2 = lambda s : r"\num{%0.2f}" % s
-    to_num4 = lambda s : r"\num{%0.4f}" % s
-    table = z[:36].to_latex(formatters={'Coupon':to_money,'Principal':to_money,'Princ. prépayé':to_money,'SP':to_money,
-                                        'Int.':to_money,'PTI':to_money,
-                                        '$p$':to_num4,'T':to_num2},
-            columns=['$p$','Coupon','Principal',r"Princ. prépayé",'Int.','SP','PTI'],
+    to_num2 = lambda s: r"\num{%0.2f}" % s
+    to_num4 = lambda s: r"\num{%0.4f}" % s
+
+    formatters = {l_ch['C']:to_money,l_ch['p']:to_num4,l_ch['L']:to_money,
+                  l_ch['PP']:to_money,l_ch['MI']:to_money,l_ch['PTI']:to_money,
+                  l_ch['SP']:to_money}
+
+    table = z[:36].to_latex(formatters=formatters,
+                            columns=l_ch.values(),
                             escape=False)
     with open('fig/table.tex','w') as f:
         f.write(table)

@@ -22,6 +22,11 @@ def marginal_zero_change(d):
     delta = d
 
 
+def marginal_zero_forward_change(d):
+    global delta_fwd
+    
+
+
 def forward_ns(t,β0,β1,β2,β3,θ1,θ2):
     '''Zero Foward rates with Nelson-Seigel'''
     return β0 + \
@@ -241,6 +246,12 @@ def _sr():
     plt.xlabel('$T$')
     plt.show()
 
+
+def ns_details():
+    z = pd.DataFrame()
+    for key,val in ns_params.items():
+        z[key] = [val]
+    return z
 
 if __name__ == '__main__':
     load_ns_params()
