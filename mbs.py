@@ -6,8 +6,7 @@ from cir import r_process
 
 τ = 1/12
 T = 5                           # Maturity
-# τ = 1/12                        # Rate of payment
-N = 500000                         # #simulation
+N = 1                         # #simulation
 r = 5.93/100                    # mortgage rate
 rc = 5.5/100                    # Coupon rate
 
@@ -21,25 +20,24 @@ def compute_details(p):
     z['T'] = np.arange(τ,T+τ,τ)
     z['P'] = P(z['T'])                     # Discount curve
 
+    p = p[:-1]
     z['p'] = p                  # Probability of prepayment
-    # z['C'] = (1 - z['p'].shift(1).fillna(0)).cumprod()
     z['C'] = (1-p).cumprod()
     z['C'] *= C0
 
-    L = np.empty(len(z)+1)
+    L = np.empty(len(z))
     L[0] = L0
     # See veronesi (8.13) p. 298 for details on the update mechanism
-    for i in range(1,len(z)+1):
-        L[i] = (1 - z.loc[i-1,'p'] + r/12)*L[i-1] - z.loc[i-1,'C']
+    for i in range(1,len(z)):
+        L[i] = (1 - p[i-1] + r/12)*L[i-1] - z.loc[i-1,'C']
 
-    z['InitialL'] = L[:-1]
-    z['FinalL'] = L[1:]
-
-    z['PP'] = z['p']*z['InitialL']  # Principal Prepaid
-    z['MI'] = r/12*z['InitialL']    # Mortgage Interest
+    z['L'] = L
+    
+    z['PP'] = z['p']*z['L']  # Principal Prepaid
+    z['MI'] = r/12*z['L']    # Mortgage Interest
     z['SP'] = z['C'] - z['MI']      # Scheduled principal
 
-    z['PTI'] = rc/12*z['InitialL']  # Passthrough interest
+    z['PTI'] = rc/12*z['L']  # Passthrough interest
 
     z['CF'] = z['PTI'] + z['SP'] + z['PP']  # Cashflows
     z['DCF'] = z['P'] * z['CF']            # Discounted cash flows
@@ -47,10 +45,27 @@ def compute_details(p):
     return z
 
 
+def table_details(p):
+    z = compute_details(p)
+    z['T'] = z['T']/12
+    z['$p$'] = z['p']
+    z['Coupon'] = z['C']
+    z['Principal'] = z['L']
+    z[r"Princ. prépayé"] = z['PP']
+    z['Int.'] = z['MI']
+    to_money = lambda s: r"\num{%0.2f}\$" % s
+    to_num2 = lambda s : r"\num{%0.2f}" % s
+    to_num4 = lambda s : r"\num{%0.4f}" % s
+    table = z[:36].to_latex(formatters={'Coupon':to_money,'Principal':to_money,'Princ. prépayé':to_money,'SP':to_money,
+                                        'Int.':to_money,'PTI':to_money,
+                                        '$p$':to_num4,'T':to_num2},
+            columns=['$p$','Coupon','Principal',r"Princ. prépayé",'Int.','SP','PTI'],
+                            escape=False)
+    with open('fig/table.tex','w') as f:
+        f.write(table)
+
+
 def faster(ps):
-    # ps = ps[τ:].values
-    # ps = np.insert(ps,0,0,axis=0)
-    # ps = (1-ps).cumprod(axis=0)
     Ts = np.arange(τ,T+τ,τ)
     Ps = P(Ts)
     ps = ps.values
@@ -61,9 +76,6 @@ def faster(ps):
     L[0,:] = L0
     for i in range(1,len(Ts)):
         L[i,:] = (1 - ps[i-1,:] + r/12)*L[i-1,:] - cs[i-1,:]
-
-    # initial_L = L[:-1,:]
-    # final_L = L[1:,:]
 
     principal_prepaid = ps*L
     mortgage_interest = r/12*L
@@ -101,35 +113,44 @@ def po(p):
     return po
 
 
+def get_ps(rs):
+    cprs = 0.07 + 1.05*np.maximum((0.0594 - (0.00837 + 0.905*rs)),0)
+    ps = 1 - (1-cprs)**(1/12)
+    return ps
+
+
 def duration(delta):
     # Baseline, no shift in the curve
     marginal_zero_change(0)     # Reset baseline
     rs = r_process(T,τ,N)
-    cprs = 0.07 + 1.05*np.maximum((0.0594 - (0.00837 + 0.905*rs)),0)
-    ps = 1 - (1-cprs)**(1/12)
+    ps = get_ps(rs)
     ios,pos = faster(ps)
+    io = ios.mean()
+    po = pos.mean()
 
     # Up shift of delta in the zero curve level
     marginal_zero_change(delta)
     rs = r_process(T,τ,N)
-    cprs = 0.07 + 1.05*np.maximum((0.0594 - (0.00837 + 0.905*rs)),0)
-    ps = 1 - (1-cprs)**(1/12)
+    ps = get_ps(rs)
     ios_plus,pos_plus = faster(ps)
+    io_plus = ios_plus.mean()
+    po_plus = pos_plus.mean()
 
     # Down shift of delta in the zero curve level
     marginal_zero_change(-delta)
     rs = r_process(T,τ,N)
-    cprs = 0.07 + 1.05*np.maximum((0.0594 - (0.00837 + 0.905*rs)),0)
-    ps = 1 - (1-cprs)**(1/12)
+    ps = get_ps(rs)
     ios_minus,pos_minus = faster(ps)
+    io_minus = ios_minus.mean()
+    po_minus = pos_minus.mean()
 
-    deriv_ios = (ios_plus - ios_minus)/(2*delta)
-    deriv_pos = (pos_plus - pos_minus)/(2*delta)
+    deriv_io = (io_plus - io_minus)/(2*delta)
+    deriv_po = (po_plus - po_minus)/(2*delta)
 
-    dur_ios = - 1/ios*deriv_ios
-    dur_pos = - 1/pos*deriv_pos
+    dur_io = - 1/io*deriv_io
+    dur_po = - 1/po*deriv_po
 
-    return dur_ios,dur_pos
+    return dur_io,dur_po
 
 
 if __name__ == '__main__':
@@ -139,4 +160,5 @@ if __name__ == '__main__':
     ps = 1 - (1-cprs)**(1/12)
 
     ios,pos = faster(ps)
-    print('Done.')
+    print(ios.mean())
+    print(pos.mean())

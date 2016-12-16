@@ -1,7 +1,7 @@
 \documentclass{article}
 \include{preamble}
 
-\title{Titre.}
+\title{Rapport}
 \author{Thierry \textsc{Bazier-Matte} \and Vincent \textsc{Johal}}
 \date{Le 16 décembre 2016}
 
@@ -12,13 +12,8 @@
 
 \section{Calibration de la courbe zéro coupon.}
 
-\begin{itemize}
-\item Etapes de la construction de la courbe ZC.
-\item Tableau des parametres
-\item Tableau des erreurs de la courbe
-\item Figure de la courbe ZC avec points empiriques
-\item Figure de la courbe ZC NS et de la courbe forward NS
-\end{itemize}
+\input{ns}
+
 
 \section{Calibration des prix caps.}
 
@@ -34,15 +29,7 @@
 \end{itemize}
 
 \section{Evaluation des MBS.}
-\begin{itemize}
-\item Methodologie
-\item Justification theorique en referant aux equation de Veronesi;
-\item Insertion d'un tableau similaire a celui de la page 299;
-\item Tableau des resultats et des statistiques appropriees (Deviation standard, kurtose,
-  etc.)
-\item Figures de la distribution et justification theorique
-\item Flux financiers des IO et des PO dans le temps (voir Fig.~12.3 p. 448 Veronesi).
-\end{itemize}
+\input{mbs}
 
 \section{Evaluation de la durée.}
 \begin{itemize}
@@ -56,6 +43,9 @@ Ceci est un test.
 
 Une couleur foncée.
 
+
+\bibliographystyle{abbrv}
+\bibliography{biblio}
 
 
 \end{document}

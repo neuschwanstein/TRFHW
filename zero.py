@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 from numpy import log,exp
 from scipy.optimize import curve_fit
-from scipy.interpolate import interp1d,pchip
+from scipy.interpolate import interp1d
 
 import matplotlib.pyplot as plt
 from matplotlib import rc
@@ -22,22 +22,12 @@ def marginal_zero_change(d):
     delta = d
 
 
-def forward_sns(t,β0,β1,β2,θ):
-    '''Simple forward rates'''
-    return forward_ns(t,β0,β1,β2,β3=0,θ1=θ,θ2=0)
-
-
 def forward_ns(t,β0,β1,β2,β3,θ1,θ2):
     '''Zero Foward rates with Nelson-Seigel'''
     return β0 + \
         β1*exp(-t/θ1) + \
         β2*t/θ1*exp(-t/θ1) + \
         β3*t/θ2*exp(-t/θ2)
-
-
-def zero_sns(t,β0,β1,β2,θ):
-    '''Simple forward rates'''
-    return zero_ns(t,β0,β1,β2,β3=0,θ1=θ,θ2=0)
 
 
 def zero_ns(t,β0,β1,β2,β3,θ1,θ2):
@@ -192,44 +182,10 @@ def load_ns_params():
     ns_params = dict(zip(args,params))
 
 
-def load_sns_params():
-    global sns_params
-
-    lsc = interpolate_curve()
-    # lsc = lsc[(lsc['T'] <= 1/12) | (lsc['T'] >= 2)]
-    # lsc.loc[1/2,'r'] = 0.16/100
-    # lsc = lsc[lsc['T'] != 1/4]
-    # lsc = lsc[lsc['T'] != 3/4]
-    # sigma = [1/10,1/10,1,1,1/15] + [1]*(len(lsc)-6) + [1/20]
-    lsc.loc[1/4,'r'] = 0.0023
-    lsc.loc[1,'r'] = 0.004
-    sigma = [1/4,1/4,2,2,1/10] + [1]*(len(lsc)-6) + [1]
-    [params,cov] = curve_fit(zero_ns,lsc['T'],lsc['r'],
-                             max_nfev=8000,
-                             sigma=sigma,
-                             method='trf')
-
-    args = 'β0 β1 β2 β3 θ1 θ2'.split()
-    # args =  'β0 β1 β2 θ'.split()
-    sns_params = dict(zip(args,params))
-
-
 def zero_curve(t):
     if ns_params is None:
         load_ns_params()
     return partial(zero_ns,**ns_params)(t) + delta
-
-
-def szero_curve(t):
-    if sns_params is None:
-        load_sns_params()
-    return partial(zero_ns,**sns_params)(t)
-
-
-def sforward_zero_curve(t):
-    if sns_params is None:
-        load_sns_params()
-    return partial(forward_ns,**sns_params)(t)
 
 
 def forward_zero_curve(t):
@@ -257,7 +213,7 @@ def forward_rate(T1,T2):
 def _r_fwd():
     t = np.linspace(0,10,10000)
     plt.plot(t,zero_curve(t),t,forward_zero_curve(t))
-    plt.legend(['Taux spot',u'Taux forward instantane'],loc='lower right')
+    plt.legend(['Taux spot',u'Taux forward'],loc='lower right')
     plt.xlabel('$T$')
     plt.show()
 
@@ -270,7 +226,9 @@ def _r_raw():
     lsc['raw_r'].plot(style='o')
     lsc['raw_swap'][1:].plot(style='o')
     plt.xlabel('$T$')
-    plt.show()
+    plt.legend(['Taux spot','Taux forward','Taux LIBOR','Taux swap'],
+               loc='lower right')
+    # plt.show()
 
 
 def _sr():
@@ -285,4 +243,4 @@ def _sr():
 
 
 if __name__ == '__main__':
-    load_sns_params()
+    load_ns_params()
