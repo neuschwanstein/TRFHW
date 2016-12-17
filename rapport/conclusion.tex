@@ -1,0 +1,28 @@
+Afin de conclure cette étude, nous allons revenir sur les principaux défis auxquels nous
+avons du faire face. Premièrement, bien que nous ayions obtenu des résultats très
+satisfaisant concernant la modélisation des prix des caps, nos prédictions de volatilité
+caps sont encore porteuse d'erreur d'un degré conséquent, surtout pour les volatilités à
+court terme. En tentant d'améliorer la modélisation de ces volatilités de courte maturité,
+c'est alors la qualité des prédictions de volatilité à plus long terme qui se
+dégradait. Il fallut donc trouver un compromis entre la qualité de prédiction du long
+terme et du court terme.  Deuxièmement, lorsque nous avons simulé nos trajectoires de taux
+court, nous avons dû faire face à un taux court qui allait chercher des valeurs trop
+élevées. Pour réduire ces trajectoires indésirables, nous avons du faire une savante
+combinaison de poids et de bornes sur les paramètres afin d'obtenir des simulations dont
+la volatilité n'était ni trop faible ni trop élevée et qui étaient bornées rapidement par
+zéro. Troisièmement, certaines trajectoires de simulation du taux court furent
+temporairement négatives et cet effet indésirable n'a pas pu être éradiqué.  Finalement,
+comme modifier complètement la courbe des taux pour déterminer la durée ne pouvait être
+envisagé, nous avons eu recours à une méthode de notre cru qui est inspirée de la durée
+calculée sur un arbre binomial. Cependant, cette méthode n'est pas à toute épreuve. Comme
+nous l'avons souligné, on obtient des valeurs assez faibles pour la durée du PO. Ceci
+s'explique possiblement par le fait que le ``choc'' qu'on fait subir au taux d'intérêt ne
+peut qu'être positif, puisqu'à une échéance d'un mois les taux ne peuvent que monter s'ils
+veulent suivre la courbe forward. Encore une fois, au vu de l'absence d'une méthode
+générale pour déterminer la durée d'un instrument dérivé d'un processus à taux court, nous
+croyons avoir implémenté ce qui nous paraissait le plus raisonnable.
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "rapport"
+%%% End:

@@ -1,47 +1,31 @@
-\documentclass[10pt]{article}
+\documentclass[10pt,fleqn]{article}
 \include{preamble}
 
-\title{Rapport}
+\title{Rapport d'évaluation}
 \author{Thierry \textsc{Bazier-Matte} \and Vincent \textsc{Johal}}
 \date{Le 16 décembre 2016}
 
 \begin{document}
 \maketitle
 
-\section{Introduction.}
+\section{Introduction}
+\input{intro}
 
-\section{Calibration de la courbe zéro coupon.}
-
+\section{Calibration de la courbe zéro coupon}
 \input{ns}
 
 
-\section{Calibration des prix caps.}
+\section{Calibration des prix caps}
+\input{cap}
 
-\begin{itemize}
-\item Figure des prix caps avec le prix black.
-\item Figures de la vol brutes et de la vol impliquée par le procesuss
-\end{itemize}
+\section{Evaluation des MBS}
+\input{test_vincent}
 
-\section{Processus CIR++.}
-\begin{itemize}
-\item Figures des processus dans le temps.
-\item Positivité des taux et bornes employées; justification
-\end{itemize}
+\section{Evaluation de la durée}
+\input{duration}
 
-\section{Evaluation des MBS.}
-\input{mbs}
-
-\section{Evaluation de la durée.}
-\begin{itemize}
-\item Justification theorique (pourquoi le $\delta$).
-\item Tableau des resultats et methodologie
-\end{itemize}
-
-\section{Conclusion.}
-
-Ceci est un test.
-
-Une couleur foncée.
+\section{Conclusion}
+\input{conclusion}
 
 
 \bibliographystyle{abbrv}

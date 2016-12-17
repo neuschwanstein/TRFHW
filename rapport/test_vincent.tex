@@ -1,0 +1,124 @@
+\subsection*{Méthodologie}
+Les mortgages backed securities ou titres adossés à des créances hypo\-thécaires sont un
+type d'obli\-gation adossé à des actifs, sécurisé par un pool d'hypothèques. Des banques
+d'investis\-sements achètent les hypothèques et titrisent les prêts hypothecaires afin de
+les revendre à des investisseurs.  Un facteur à prendre en compte lorsqu'il est question
+d'évaluer une MBS est la vitesse de prépaiement des débiteurs hypothécaires. En effet,
+selon le niveau de taux d'intérêt, les détenteurs d'hypothèques repaient leur dette plus
+ou moins rapidement. Pour intégrer cet aspect à l'évaluation de la MBS, nous attribuons
+une probabilité de prépaiement $p_t$ pour chaque mensualité $t$. Cette probabilité
+correspond à une fonction intégrant un facteur de taux de prépaiement conditionel, dénoté
+ici par $CPR_t$ (conditional prepayment rate). Le $CPR_t$ est définit dans le mandat par
+la fonction suivante:
+\[
+CPR_t= 0.07+1.05*\max\{(0.0594-(0.00837+0.905r_t),0\}
+\]
+dont les valeurs sont fondées sur les travaux de \cite{chernov2016macroeconomic}.
+
+La probabilité $p_t$ est ensuite déterminée comme suit: 
+\[
+p_t=1-(1-CPR_t)^{1/12}
+\]
+et illustre la vitesse à laquelle le prepaiement survient. 
+
+Les cashflows de la MBS se résument aux trois quantités suivantes:
+\begin{gather*}
+\text{Paiement d'intérêts sur MBS}: I_t^{MBS}=\frac{r_{12}^{MBS}}{12}*L_t \\
+\text{Principal anticipé}: Pay_t^{scheduled}=C_t-I_t \\
+\text{Prepaiement du principal}: Pay_t^{prepaid}=p_t*L_t
+\end{gather*}
+et requièrent les quantités ci-dessous:
+\begin{gather*}
+\text{Paiement d'intérêts hypothécaires:} I_t=\frac{r_{12}^{m}}{12}*L_t \\
+\text{Principal non-payé}: L_{t+1}=L_t-Pay_t^{scheduled}-Pay_t^{prepaid} \\
+\text{Mise à jour du coupon anticipé}: C_{t+1}=(1-p_t)*C_t
+\end{gather*}
+
+Le coupon initial $C_0$ est déterminé de façon à satisfaire la relation de la valeur actualisée des coupons et du principal définie par
+\[
+\text{Principal}=\sum_{i=1}^{5\cdot 12} \frac{C_0}{\left(1+\frac{r_{12}^{m}}{12}\right)^i}
+\]
+
+La valeur du Principal
+$L_0$ correspond à la valeur indiquée dans le descriptif de la MBS dans le mandat,
+c'est-à-dire \num{7326596}\$.
+
+Ainsi nous pouvons définir le flux monétaire mensuel généré par la MBS selon:
+\[
+\text{Cash-flow total par mensualité}: CF_t=I_t+Pay_t^{scheduled}+Pay_t^{prepaid}.
+\]
+
+
+Les dérivés hypothécaires \textit{Interest Only strips} et \textit{Principal Only strips}
+que le courtier souhaite émettre constituent les flux monétaires d'une MBS lorsqu'ils sont
+combinés. La \textit{Interest Only} verse à son détenteur les flux monétaires attachés aux
+coupons de la mortgage backed security. Le détenteur d'une IO est long le taux d'intêret
+puisqu'une baisse du taux incite les détenteurs d'hypothèques à accélérer le remboursement
+de leurs hypothèques. Par conséquent, les intérêts de la MBS sont perçus sur un capital
+qui décroît plus vite. À l'inverse, la \textit{Principal only} découle des flux monétaires
+liés au remboursement du principal et celle-ci prend de la valeur lorsque le taux
+d'intêret baisse, puisque il accélère le remboursement des hypothèques et donc des flux
+monétaires de la PO.
+
+\small
+\begin{table}
+  \centering
+  \caption{}
+  \label{mbs_table}
+  \makebox[\textwidth]{\input{../fig/table}}
+\end{table}
+\normalsize
+
+Pour obtenir la valeur de la IO, il suffit de faire la somme de tous les cashflows
+d'intérêt payés par la MBS (colonne 6), ajustés par le facteur d'actualisation
+correspondant à la période $t$ (colonne 9). La valeur de la PO est constituée de la somme
+des paiements anticipés (colonne 8) actualisés ainsi que la somme des prépaiements de
+principal (colonne 5) actualisés.
+
+
+
+\subsection*{Résultats}
+La Table \ref{iopo_table} présente les prix obtenus, ainsi que les statistiques associées,
+pour une évaluation Monte Carlo de \num{50000} trajectoires. En outre, la Figure
+\ref{histos} présente un histogramme de la valeur des IO et des PO. On remarque notamment
+l'asymétrie opposée des deux produits dérivés.
+
+Pour expliquer ces résultats, attardons nous d'abord sur l'histogramme de la valeur des
+IO. On remarque que celle-ci suit de près la distribution des taux courts. Mais la valeur
+d'un dérivé IO est directement corrélé à la valeur des taux courts: des taux élevés
+impliquent un prépaiement faible, et donc un principal plus important sur lequel prélever
+des intérêts. Et inversement pour les taux faibles.
+
+De la même façon, des taux élevés impliquent une hausse dans les prépaiements ce qui
+entraîne alors des flux monétaires importants et donc hausse la valeur du PO, ce qui
+explique une distribution symétrique à celles des taux courts. 
+
+\begin{figure}
+  \centering
+  \begin{subfigure}{0.3\paperwidth}
+    \centering
+    \caption{Histogramme de la valeur des PO}
+    \includegraphics[width=0.3\paperwidth]{../fig/po_hist.pdf}
+  \end{subfigure}
+  ~
+  \begin{subfigure}{0.3\paperwidth}
+    \centering
+    \caption{Histogramme de la valeur des IO}
+    \includegraphics[width=0.3\paperwidth]{../fig/io_hist.pdf}
+  \end{subfigure}
+  \caption{}
+  \label{histos}
+\end{figure}
+
+\begin{table}
+  \centering
+  \caption{}
+  \label{iopo_table}
+\input{../fig/iopo_table.tex}
+\end{table}
+
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "rapport"
+%%% End:

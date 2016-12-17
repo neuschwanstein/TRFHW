@@ -1,0 +1,11 @@
+Ce mandat introduit une Mortgage backed security qui s'avère être un parfait candidat de
+sous-jacent pour une paire de dérivés Interest Only strips et Principal Only
+strips. Premièrement, nous déterminerons les courbes forward et zéro coupon à partir des
+données Libor-Swap disponibles dans le mandat, grâce au modèle de courbe
+Nelson-Siegel. Deuxièmement, nous déterminerons les prix des caps qui sont implicites aux
+volatilités Black décrites dans le mandat. Armés de notre courbe forward et des prix des
+caps, nous calibrerons notre modèle de taux court, le CIR++ afin de répliquer au mieux les
+deux séries d'inputs de départ. Finalement, en simulant les taux d'intérêts par une
+simulation de Monte Carlo nous évaluerons les flux monétaires liés à la Mortgage backed
+security et dériverons les valeurs des IO et PO, ainsi que leur sensibilité au taux
+d'intérêt.

@@ -6,6 +6,8 @@ from scipy.optimize import root,curve_fit
 
 from zero import zero_price as P, forward_rate as F, forward_zero_curve as f_m, zero_curve as R
 
+import matplotlib.pyplot as plt
+
 τ = 3/12
 Φ = norm.cdf
 χ2 = ncx2.cdf
@@ -201,6 +203,23 @@ def load_cir_params():
     return cir_params
 
 
+def _table_cir():
+    cir_params = load_cir_params()
+    real = ['x0','σ','θ','k']
+    idx = ['$x_0$','$\sigma$','$\theta$','$k$']
+    z = pd.DataFrame(index=idx)
+    z['Paramètres initiaux'] = r"\num{0.0001} \num{0.6} \num{0.01} \num{0.08}".split()
+    z['Borne inférieure'] = "$-\infty$ $-\infty$ $-\infty$ 0".split()
+    z['Borne supérieure'] = "$R(0)$ $\infty$ $1.25f(0,10)$ 0.15".split()
+    # to_num4 = lambda s: r"\num{%0.4f}" % s
+    to_num = lambda s: r"\num{%s}" % str(s)
+    z['Paramètres obtenus'] = [to_num(cir_params[p]) for p in real]
+
+    table = z.to_latex(escape=False)
+    with open('fig/cir_table.tex','w') as f:
+        f.write(table)
+
+
 def cir_process(T,τ,N,x0,k,θ,σ):
     '''CIR process implementation.'''
     m = int(T/τ)+1
@@ -256,17 +275,24 @@ def _cap_prices():
     lsc = lsc.set_index('T',drop=False)
     lsc = lsc.sort_index()
 
-    # rmse = sqrt(((lsc.cap - lsc.raw_cap)**2).mean())  # 
-
-    lsc[['cap','raw_cap']].plot(style=['-','o'],legend=None)
-    # lsc[['σ','raw_σ']].plot(style=['-','o'])
-    plt.axis(xmin=0)
-    plt.show()    
+    # lsc[['cap','raw_cap']].plot(style=['-','o'],legend=None)
+    lsc[['σ','raw_σ']].plot(style=['-','o'],legend=False)
+    plt.xlabel('$T$')
+    plt.ylabel('Volatilite')
+    # plt.legend(['Prix CIR++','Prix empiriques'],
+    #            loc='lower right')
+    plt.legend(['Vol. CIR++','Vol. empiriques'],
+               loc='upper right')
+    plt.axis(ymax=1,ymin=0.25)
+    # plt.axis(xmin=0)
+    # plt.show()
 
 
 def _r_processes(N=25):
     r_process(10,1/12,N,**cir_params).plot(legend=False)
     plt.plot([0,10],[0,0],'--k',linewidth=2)
+    plt.xlabel('$T$')
+    plt.ylabel('Taux court')
     plt.show()
 
 
@@ -275,44 +301,35 @@ def _mean_r(N=25):
     plt.plot(ts,f_m(ts))
     rs = r_process(10,1/24,5000,**cir_params)
     μ = rs.mean(axis=1)
-    std = rs.std(axis=1)
-    (μ+std).plot()
+    # std = rs.std(axis=1)
+    # (μ+std).plot()
     (μ).plot()
-    (μ-std).plot()
-    plt.show()
+    # (μ-std).plot()
+    plt.legend(['f(0,t)','Moyenne des trajectoires $r(t)$'],
+               loc='lower right')
+    plt.xlabel('$T$')
+    # plt.show()
+
+
+def _cap_prices_details():
+    lsc = get_data()
+    l_ch = {'T':'$T$','σ':'$\sigma$','cap':'Prix cap'}
+    for old,new in l_ch.items():
+        lsc[new] = lsc[old]
+
+    to_money = lambda s: r"\num{%0.6f}\$" % s
+    to_num4 = lambda s: r"\num{%0.4f}" % s
+
+    formatters = {l_ch['σ']:to_num4,l_ch['cap']:to_money}
+
+    table = lsc.to_latex(formatters=formatters,
+                         columns=l_ch.values(),
+                         escape=False,
+                         index=False)
+
+    with open('fig/cap_table.tex','w') as f:
+        f.write(table)
 
 
 if __name__ == '__main__':
     load_cir_params()
-    # cir_params
-    # r_process(10,1/12,25,**cir_params).plot(legend=False)
-    # plt.show()
-
-    # if cir_params is None:
-    #     load_cir_params()
-
-    # lsc = get_data()
-    # T = np.arange(2*τ,10+τ,2*τ)
-
-    # # Update of results datastructure
-    # for t in np.arange(1,11):
-    #     price = cap_CIR(t,**cir_params)
-    #     σ = cap_vol(price,t)
-    #     lsc.loc[t,'cap'] = price
-    #     lsc.loc[t,'σ'] = σ
-    #     lsc.loc[t,'T'] = t
-    # lsc = lsc.set_index('T',drop=False)
-    # lsc = lsc.sort_index()
-
-    # rmse = sqrt(((lsc.cap - lsc.raw_cap)**2).mean())
-
-    # lsc[['cap','raw_cap']].plot(style=['-','o'])
-    # # lsc[['σ','raw_σ']].plot(style=['-','o'])
-    # plt.axis(xmin=0)
-    # plt.show()
-
-    # # Show Er(t) == f(0,t)
-    # ts = np.linspace(0,10,10000)
-    # plt.plot(ts,f_m(ts))
-    # forw = r_process(10,1/24,5000,**cir_params).mean(axis=1).plot(legend=False)
-    # plt.show()

@@ -1,0 +1,65 @@
+Pour déterminer la durée, comme il ne nous a pas semblé exister de consensus sur la façon
+de la calculer, nous avons procédé de la façon suivante (voir
+\verb+duration2(N):mbs.py+). Tout d'abord nous avons déterminé les valeurs initiales des
+IO et PO. Puis, afin de simuler un choc, nous nous sommes inspirés de la méthode employée
+lors d'une tarification avec arbre binomial (voir \cite{veronesi}, p.~448). Parmis toutes
+les trajectoires de taux court obtenues, nous n'avons retenues que celles qui tombaient à
+une valeur inférieur à un écart type de la moyenne et celles supérieures à la même
+quantité. À partir de ces taux initialement élevés ou bas, nous avons calculé la valeur
+des IO et des PO un mois plus tard, que nous avons comparés à la valeur initiale. Ceci
+nous a permis de simuler un choc sur la valeur du PO, observé au mois suivant, donc avec
+un effet temporel relativement limité.
+
+En somme, l'équation suivante a été employée:
+\[
+  D = -\frac{1}{V(0)}\frac{V(1/12)_{up} - V(1/12)_{down}}{\bar r_{up} - \bar r_{down}}
+\]
+pour les deux produits dérivés. Notons que $\bar r_{up}$ et $\bar r_{down}$ correspondent
+à la moyenne des taux supérieurs et inférieurs.
+
+On obtient avec une telle méthode, avec une simulation de $N=\num{100000}$ paramètres une
+durée de \num{-1.0302} pour le IO et de \num{0.0316} pour le PO. Notons que ces résultats
+sont cohérents pour les raisons évoquées plus haut.
+
+Notons en passant que nous avons également été tentés de faire bouger la courbe zéro
+coupon au grand complet, mais qu'un telle méthode est très lente à faire converger, et ce
+pour plusieurs raisons. D'abord, la kurtose importante de la distribution de $r_t$
+implique qu'une telle simulation peut mettre du temps à converger à une valeur suffisament
+précise. Ensuite, le mouvement qu'on peut donner à la courbe est très faible, puisque
+celle-ci commence déjà avec des valeurs faibles. De sorte qu'un mouvement si faible peut
+être difficilement mesurable, notamment pour la raison évoquée ci haut. 
+
+
+% Pour calculer la durée des IO et PO, la formule de la \textit{durée effective} pour MBS
+% tirée de Veronesi p.301 est utilisée.
+
+% \[
+% D\approx-\frac{1}{P}\frac{P(+x bps)-P(-x bps)}{2*x bps}
+% \]
+
+% où $P$ représente la valeur du titre et $P(+x bps)$ et $P(-x bps)$ décrivent le prix du
+% titre si la courbe de taux est décalée vers le haut ou vers le bas d'une quantité de $x$
+% points de base. Nous obtenons les valeurs suivantes pour les durées de chacun des deux
+% dérivés:
+
+
+% \[
+% D^{IO}\approx-\frac{1}{P^{IO}}\frac{P^{IO}(+1 bps)-P^{IO}(-1 bps)}{2*1 bps} \\
+% D^{PO}\approx-\frac{1}{P^{PO}}\frac{P^{PO}(+1 bps)-P^{PO}(-1 bps)}{2*1 bps}
+% \]
+
+
+
+% Resultats
+
+% La durée obtenue pour la IO est négative alors que la PO est positive. Ces résultats sont cohérents avec l'intuition décrite ci-dessus. D'ailleurs, en additionnant les deux durées de $D^{IO}$ et $D^{PO}$, nous retrouvons la durée de la MBS.
+
+% \[
+% D^{IO}+D^{IO}=X=D^{MBS}\approx-\frac{1}{P^{MBS}}\frac{P^{MBS}(+1 bps)-P^{MBS}(-1 bps)}{2*1 bps}
+% \]
+
+
+% %%% Local Variables:
+% %%% mode: latex
+% %%% TeX-master: "rapport"
+% %%% End:

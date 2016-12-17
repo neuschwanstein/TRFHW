@@ -1,0 +1,29 @@
+Introduction
+
+Ce mandat introduit une Mortgage backed security qui s'avère être un parfait
+candidat de sous-jacent pour une paire de dérivés Interest Only strips et Principal
+Only strips. Avant de pouvoir évaluer ces dérivés, plusieurs étapes sont
+requises. Premièrement, il faut déterminer une courbe forward à partir des
+données Libor-Swap disponibles dans le mandat qui permettent une modélisation de la
+structure à terme grâce au modèle de courbe Nelson-Siegel. Deuxièmement, nous
+devons determiner les prix des caps qui sont implicites aux volatilités Black
+décrites dans le mandat. Armés de notre courbe forward et des prix des caps, nous
+pouvons calibrer notre modèle de taux court, le CIR++ afin de répliquer au mieux les
+deux séries d'inputs de départ. Finalement, en simulant les taux d'intérêts
+par une simulation de Monte Carlo nous pouvons déterminer les flux monétaires
+liés à la Mortgage backed security et dériver les valeurs des IO et PO, ainsi que
+leur sensibilité au taux d'intérêt.
+
+
+
+MBS
+l'ecart type de IO est plus important que l'ecart type du PO. C'est du au fait que la IO est sensible surtout au debut de la maturité au changement de taux d'interet alors que la PO sera plus sensible vers la fin de la maturité. etant donné que les cash flow de fin de maturiés sont proportionnellement plus discontés que ceux du debut, l sensible a la 
+
+
+Conclusion
+
+
+
+la durée
+0.0042-0.00176
+

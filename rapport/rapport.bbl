@@ -6,6 +6,12 @@ D.~Brigo and F.~Mercurio.
   and credit}.
 \newblock Springer Science \& Business Media, 2007.
 
+\bibitem{chernov2016macroeconomic}
+M.~Chernov, B.~R. Dunn, and F.~A. Longstaff.
+\newblock Macroeconomic-driven prepayment risk and the valuation of
+  mortgage-backed securities.
+\newblock Technical report, National Bureau of Economic Research, 2016.
+
 \bibitem{conn2000trust}
 A.~R. Conn, N.~I. Gould, and P.~L. Toint.
 \newblock {\em Trust region methods}, volume~1.
@@ -15,6 +21,11 @@ A.~R. Conn, N.~I. Gould, and P.~L. Toint.
 F.~X. Diebold and C.~Li.
 \newblock Forecasting the term structure of government bond yields.
 \newblock {\em Journal of econometrics}, 130(2):337--364, 2006.
+
+\bibitem{glasserman}
+P.~Glasserman.
+\newblock {\em Monte Carlo Methods in Financial Engineering}, volume~53.
+\newblock Springer Science \& Business Media, 2003.
 
 \bibitem{veronesi}
 P.~Veronesi.
