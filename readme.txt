@@ -12,4 +12,4 @@ Pour évaluer ces programmes, vous aurez besoin de Python 3 ainsi que de quelque
 scientifiques standard (essentiellement numpy, scipy, pandas et matplotlib pour la
 production de graphiques).
 
-Pour toute question : thxierry.bazier-matte@hec.ca
+Pour toute question : thierry.bazier-matte @ hec.ca
